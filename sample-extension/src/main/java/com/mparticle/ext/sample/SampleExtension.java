@@ -10,6 +10,9 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mixpanel.mixpanelapi.ClientDelivery;
+import com.mixpanel.mixpanelapi.MessageBuilder;
+import com.mixpanel.mixpanelapi.MixpanelAPI;
 import com.mparticle.sdk.MessageProcessor;
 import com.mparticle.sdk.model.audienceprocessing.AudienceMembershipChangeRequest;
 import com.mparticle.sdk.model.audienceprocessing.AudienceMembershipChangeResponse;
@@ -42,8 +45,8 @@ import com.mparticle.sdk.model.registration.Permissions;
 import com.mparticle.sdk.model.registration.Setting;
 import com.mparticle.sdk.model.registration.TextSetting;
 import com.mparticle.sdk.model.registration.UserIdentityPermission;
-import org.glassfish.jersey.client.JerseyClientBuilder;
-import org.glassfish.jersey.jackson.JacksonFeature;
+import org.json.JSONObject;
+
 
 /**
  * Arbitrary sample extension. Typically this class would interface
@@ -65,10 +68,7 @@ public class SampleExtension extends MessageProcessor {
 
     String hostname;
     String token;
-    Client client = JerseyClientBuilder.createClient()
-            .register(ObjectMapper.class)
-            .register(JacksonFeature.class);
-    WebTarget webTarget;
+    MixpanelAPI mixpanel;
 
     @Override
     public ModuleRegistrationResponse processRegistrationRequest(ModuleRegistrationRequest request) {
@@ -156,8 +156,7 @@ public class SampleExtension extends MessageProcessor {
         Account account = request.getAccount();
         hostname = account.getStringSetting(SETTING_HOSTNAME, true, null);
         token = account.getStringSetting(SETTING_TOKEN, true, null);
-        webTarget = client.target("https://"+hostname+".alooma.io");
-
+        mixpanel = new MixpanelAPI("https://"+hostname+".alooma.io/track/"+token, "https://"+hostname+".alooma.io/track"+token);
         return super.processEventProcessingRequest(request);
     }
 
@@ -238,8 +237,8 @@ public class SampleExtension extends MessageProcessor {
     }
 
     private void sendEvent(Event event) throws IOException{
-        Response response = webTarget.path("rest/"+token).request()
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .post(Entity.json(event));
+        ClientDelivery delivery = new ClientDelivery();
+        delivery.addMessage(new JSONObject(event));
+        mixpanel.deliver(delivery);
     }
 }
