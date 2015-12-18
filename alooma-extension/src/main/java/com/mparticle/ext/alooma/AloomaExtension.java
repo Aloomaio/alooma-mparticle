@@ -28,11 +28,9 @@ public class AloomaExtension extends MessageProcessor {
     //The Alooma hostname <hostname>.alooma.io
     public static final String SETTING_HOSTNAME = "hostname";
 
-    String token;
     Client client = JerseyClientBuilder.createClient()
             .register(ObjectMapper.class)
             .register(JacksonFeature.class);
-    WebTarget webTarget;
 
     @Override
     public ModuleRegistrationResponse processRegistrationRequest(ModuleRegistrationRequest request) {
@@ -113,11 +111,10 @@ public class AloomaExtension extends MessageProcessor {
         if (request.getEvents().size() > 0) {
             Account account = request.getAccount();
             String hostname = account.getStringSetting(SETTING_HOSTNAME, true, null);
-            token = account.getStringSetting(SETTING_TOKEN, true, null);
-            webTarget = client.target("https://" + hostname + ".alooma.io");
+            String token = account.getStringSetting(SETTING_TOKEN, true, null);
             //don't forward credentials/API keys
             request.setAccount(null);
-            sendEvent(request);
+            sendEvent(request, hostname, token);
         }
 
         return new EventProcessingResponse();
@@ -133,7 +130,8 @@ public class AloomaExtension extends MessageProcessor {
         return super.processAudienceSubscriptionRequest(request);
     }
 
-    private void sendEvent(EventProcessingRequest eventRequest) throws IOException{
+    private void sendEvent(EventProcessingRequest eventRequest, String hostname, String token) throws IOException{
+        WebTarget webTarget = client.target("https://" + hostname + ".alooma.io");
         Response response = webTarget.path("rest/"+token).request()
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .post(Entity.json(eventRequest));
