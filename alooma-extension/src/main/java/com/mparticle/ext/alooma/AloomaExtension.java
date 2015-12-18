@@ -23,18 +23,14 @@ public class AloomaExtension extends MessageProcessor {
 
     //this name will show up in the mParticle UI
     public static final String NAME = "Alooma";
-
     //The Alooma input token
     public static final String SETTING_TOKEN = "token";
     //The Alooma hostname <hostname>.alooma.io
     public static final String SETTING_HOSTNAME = "hostname";
 
-    String hostname;
-    String token;
     Client client = JerseyClientBuilder.createClient()
             .register(ObjectMapper.class)
             .register(JacksonFeature.class);
-    WebTarget webTarget;
 
     @Override
     public ModuleRegistrationResponse processRegistrationRequest(ModuleRegistrationRequest request) {
@@ -112,86 +108,16 @@ public class AloomaExtension extends MessageProcessor {
      */
     @Override
     public EventProcessingResponse processEventProcessingRequest(EventProcessingRequest request) throws IOException {
-        //do some setup, then call super. if you don't call super, you'll effectively short circuit
-        //the whole thing, which isn't really fun for anyone.
-        Account account = request.getAccount();
-        hostname = account.getStringSetting(SETTING_HOSTNAME, true, null);
-        token = account.getStringSetting(SETTING_TOKEN, true, null);
-        webTarget = client.target("https://"+hostname+".alooma.io");
+        if (request.getEvents().size() > 0) {
+            Account account = request.getAccount();
+            String hostname = account.getStringSetting(SETTING_HOSTNAME, true, null);
+            String token = account.getStringSetting(SETTING_TOKEN, true, null);
+            //don't forward credentials/API keys
+            request.setAccount(null);
+            sendEvent(request, hostname, token);
+        }
 
-        return super.processEventProcessingRequest(request);
-    }
-
-    @Override
-    public void processProductActionEvent(ProductActionEvent event) throws IOException {
-        sendEvent(event);
-        super.processProductActionEvent(event);
-    }
-
-    @Override
-    public void processApplicationStateTransitionEvent(ApplicationStateTransitionEvent event) throws IOException {
-        sendEvent(event);
-        super.processApplicationStateTransitionEvent(event);
-    }
-
-    @Override
-    public void processCustomEvent(CustomEvent event) throws IOException {
-        sendEvent(event);
-        super.processCustomEvent(event);
-    }
-
-    @Override
-    public void processErrorEvent(ErrorEvent event) throws IOException {
-        sendEvent(event);
-        super. processErrorEvent(event);
-    }
-
-    @Override
-    public void processPrivacySettingChangeEvent(PrivacySettingChangeEvent event) throws IOException {
-        sendEvent(event);
-        super.processPrivacySettingChangeEvent(event);
-    }
-
-    @Override
-    public void processPushMessageReceiptEvent(PushMessageReceiptEvent event) throws IOException {
-        sendEvent(event);
-        super.processPushMessageReceiptEvent(event);
-    }
-
-    @Override
-    public void processPushSubscriptionEvent(PushSubscriptionEvent event) throws IOException {
-        sendEvent(event);
-        super.processPushSubscriptionEvent(event);
-    }
-
-    @Override
-    public void processScreenViewEvent(ScreenViewEvent event) throws IOException {
-        sendEvent(event);
-        super.processScreenViewEvent(event);
-    }
-
-    @Override
-    public void processSessionStartEvent(SessionStartEvent event) throws IOException {
-        sendEvent(event);
-        super.processSessionStartEvent(event);
-    }
-
-    @Override
-    public void processSessionEndEvent(SessionEndEvent event) throws IOException {
-        sendEvent(event);
-        super.processSessionEndEvent(event);
-    }
-
-    @Override
-    public void processUserAttributeChangeEvent(UserAttributeChangeEvent event) throws IOException {
-        sendEvent(event);
-        super.processUserAttributeChangeEvent(event);
-    }
-
-    @Override
-    public void processUserIdentityChangeEvent(UserIdentityChangeEvent event) throws IOException {
-        sendEvent(event);
-        super.processUserIdentityChangeEvent(event);
+        return new EventProcessingResponse();
     }
 
     @Override
@@ -204,9 +130,10 @@ public class AloomaExtension extends MessageProcessor {
         return super.processAudienceSubscriptionRequest(request);
     }
 
-    private void sendEvent(Event event) throws IOException{
+    private void sendEvent(EventProcessingRequest eventRequest, String hostname, String token) throws IOException{
+        WebTarget webTarget = client.target("https://" + hostname + ".alooma.io");
         Response response = webTarget.path("rest/"+token).request()
                 .accept(MediaType.APPLICATION_JSON_TYPE)
-                .post(Entity.json(event));
+                .post(Entity.json(eventRequest));
     }
 }
