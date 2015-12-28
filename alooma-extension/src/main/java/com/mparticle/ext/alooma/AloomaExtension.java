@@ -3,6 +3,7 @@ package com.mparticle.ext.alooma;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
@@ -132,8 +133,14 @@ public class AloomaExtension extends MessageProcessor {
 
     private void sendEvent(EventProcessingRequest eventRequest, String hostname, String token) throws IOException{
         WebTarget webTarget = client.target("https://" + hostname + ".alooma.io");
-        Response response = webTarget.path("rest/"+token).request()
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .post(Entity.json(eventRequest));
+        List<Event> eventList = eventRequest.getEvents();
+        eventRequest.setEvents(new ArrayList<Event>(1));
+        for (Event event : eventList) {
+            eventRequest.getEvents().add(event);
+            Response response = webTarget.path("rest/" + token).request()
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
+                    .post(Entity.json(eventRequest));
+            eventRequest.getEvents().clear();
+        }
     }
 }
