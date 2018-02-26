@@ -66,7 +66,7 @@ public class AloomaExtension extends MessageProcessor {
         response.setPermissions(permissions);
 
         List<Setting> processorSettings = Arrays.asList(
-                new TextSetting(SETTING_TOKEN, "Alooma Input token").setIsRequired(true).setIsConfidential(true).setDescription("The token that corresponds to your Alooma REST input")
+                new TextSetting(SETTING_TOKEN, "Alooma Input token").setIsRequired(true).setIsConfidential(true).setDescription("The token that corresponds to your Alooma Custom Webhook input")
         );
 
         List<Event.Type> supportedEventTypes = Arrays.asList(
